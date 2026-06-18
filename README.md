@@ -41,7 +41,7 @@ SART_CLIP/
 |-- test/
 |   |-- PGD.py                          # PGD-100 evaluation
 |   `-- AA-fast.py                      # AA-fast evaluation
-|-- requirements.txt                    # Development environment export
+|-- requirements.txt                    # Portable project dependencies
 |-- .gitattributes                      # Git LFS tracking for checkpoints
 `-- .gitignore
 ```
@@ -68,7 +68,7 @@ If the checkpoint files are only around 100 bytes after cloning, they are LFS po
 
 ## Environment
 
-The code was developed with PyTorch, TorchVision, OpenAI CLIP, PIL, tqdm, and AutoAttack. The current `requirements.txt` is an exported development environment and may contain machine-specific local paths. A minimal installation can be created as follows:
+The code was developed with PyTorch, TorchVision, OpenAI CLIP, PIL, tqdm, and AutoAttack. Install the PyTorch build that matches your CUDA version first, then install the remaining portable dependencies from `requirements.txt`:
 
 ```bash
 conda create -n sart_clip python=3.10 -y
