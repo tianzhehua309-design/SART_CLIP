@@ -78,9 +78,7 @@ conda activate sart_clip
 # Example for CUDA 12.1:
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
-pip install ftfy regex tqdm pillow numpy pandas scikit-learn
-pip install git+https://github.com/openai/CLIP.git
-pip install git+https://github.com/fra31/auto-attack
+pip install -r requirements.txt
 ```
 
 If you use a different CUDA version, install the matching PyTorch build from the official PyTorch installation page.
@@ -106,27 +104,38 @@ FGVC Aircraft, Flowers102, Food101, Hateful Memes, OxfordPets,
 PCAM, StanfordCars, STL10, SUN397
 ```
 
-Some datasets are loaded through `torchvision.datasets`; others are expected as `ImageFolder` directories. Configure the dataset roots in the evaluation scripts before running.
+Some datasets are loaded through `torchvision.datasets`; others are expected as `ImageFolder` directories. By default, scripts look for datasets under `data/`, checkpoints under `checkpoint/`, and outputs under `outputs/`. You can override these locations with command-line arguments.
 
 ## Configuration
 
-The current scripts use constants near the top of each file rather than command-line arguments. Before running, update these paths for your machine:
+The main scripts no longer require editing machine-specific paths in the source code. Use these common arguments instead:
 
-| File | Main fields to update |
+| Argument | Meaning |
 | --- | --- |
-| `model/sp_casa.py` | `TRAIN_PATH`, `BASE_SAVE_DIR`, `SEM_DESC_JSON` |
-| `model/sart_clip.py` | `TRAIN_PATH`, `BASE_SAVE_DIR`, `CKPT_SP_CASA_EPOCH9_EMA`, `CKPT_TECOA`, `CKPT_FARE`, `SEM_DESC_JSON` |
-| `test/PGD.py` | `SEM_DESC_JSON`, entries in `METHODS`, entries in `DATASETS` |
-| `test/AA-fast.py` | `SEM_DESC_JSON`, entries in `METHODS`, entries in `DATASETS` |
-| `prompt/build_sem_desc_all_datasets_fg_bias_hybrid.py` | `PROJECT_DIR`, `DATA_ROOT`, `OUT_JSON` |
+| `--data-root` | Root directory containing datasets. |
+| `--ckpt-root` | Root directory containing checkpoints. Defaults to `checkpoint/`. |
+| `--sem-desc-json` | Semantic-description JSON used for prompt banks. |
+| `--output-dir` | Training output directory. |
+| `--results-csv` | Evaluation CSV output path. |
+| `--methods` | Optional subset of method names to evaluate. |
+| `--datasets` | Optional subset of dataset names to evaluate. |
 
-For the released checkpoints in this repository, the most important model paths are:
+For the released checkpoints in this repository, the most important files are:
 
 ```python
 checkpoint/SP_CASA/epoch_9_ema.pt
 checkpoint/SART/epoch_1_ema.pt
 prompt/sem_desc_imagenet_fg_bias.json
 prompt/sem_desc_all_datasets_fg_bias_hybrid.json
+```
+
+To regenerate the hybrid semantic-description file:
+
+```bash
+python prompt/build_sem_desc_all_datasets_fg_bias_hybrid.py \
+  --data-root /path/to/datasets \
+  --base-json prompt/sem_desc_imagenet_fg_bias.json \
+  --out-json prompt/sem_desc_all_datasets_fg_bias_hybrid.json
 ```
 
 ## Training
@@ -136,7 +145,10 @@ prompt/sem_desc_all_datasets_fg_bias_hybrid.json
 SP-CASA obtains the prompt-aware robust warm start.
 
 ```bash
-python model/sp_casa.py
+python model/sp_casa.py \
+  --train-path /path/to/ImageNet/train \
+  --sem-desc-json prompt/sem_desc_imagenet_fg_bias.json \
+  --output-dir outputs/sp_casa_ablation_runs
 ```
 
 Main training configuration from the paper draft:
@@ -159,7 +171,11 @@ Main training configuration from the paper draft:
 SART-CLIP initializes from the SP-CASA EMA checkpoint and performs semantic-preserving robust transfer.
 
 ```bash
-python model/sart_clip.py
+python model/sart_clip.py \
+  --train-path /path/to/ImageNet/train \
+  --ckpt-root checkpoint \
+  --sem-desc-json prompt/sem_desc_all_datasets_fg_bias_hybrid.json \
+  --output-dir outputs/sart_ablation_runs
 ```
 
 Main Stage-II configuration:
@@ -181,7 +197,11 @@ Main Stage-II configuration:
 ### PGD-100
 
 ```bash
-python test/PGD.py
+python test/PGD.py \
+  --data-root /path/to/datasets \
+  --ckpt-root checkpoint \
+  --methods clip_vit_b32 sp_casa_epoch9_ema sart_clip_semjson_source_only \
+  --results-csv outputs/evaluation/pgd100_results.csv
 ```
 
 The main evaluation protocol uses PGD-100 with `epsilon = 1/255`, `alpha = 1/255`, and one random restart. Each model is attacked with its own current zero-shot classification head.
@@ -189,7 +209,11 @@ The main evaluation protocol uses PGD-100 with `epsilon = 1/255`, `alpha = 1/255
 ### AA-fast
 
 ```bash
-python test/AA-fast.py
+python test/AA-fast.py \
+  --data-root /path/to/datasets \
+  --ckpt-root checkpoint \
+  --methods clip_vit_b32 sp_casa_epoch9_ema sart_clip_semjson_source_only \
+  --results-csv outputs/evaluation/aa_fast_results.csv
 ```
 
 AA-fast uses the APGD-CE and APGD-DLR branches from AutoAttack as an adaptive-attack sanity check. It is not the full AutoAttack suite with all attack branches.

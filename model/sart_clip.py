@@ -2,6 +2,7 @@
 """
 SART-CLIP
 """
+import argparse
 import os
 import json
 import copy
@@ -22,10 +23,19 @@ import clip
 # ============================================================
 # Config
 # ============================================================
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DATA_ROOT = os.environ.get("SART_DATA_ROOT", os.path.join(REPO_ROOT, "data"))
+DEFAULT_OUTPUT_ROOT = os.environ.get(
+    "SART_OUTPUT_ROOT", os.path.join(REPO_ROOT, "outputs")
+)
+DEFAULT_CKPT_ROOT = os.environ.get(
+    "SART_CKPT_ROOT", os.path.join(REPO_ROOT, "checkpoint")
+)
+
 SEED = 42
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-TRAIN_PATH = r"E:\DeepLearning\Datasets\ImageNet_extracted\ILSVRC\Data\CLS-LOC\train"
+TRAIN_PATH = os.path.join(DEFAULT_DATA_ROOT, "ImageNet", "train")
 # ============================================================
 # Ablation name
 # ============================================================
@@ -43,10 +53,10 @@ TRAIN_PATH = r"E:\DeepLearning\Datasets\ImageNet_extracted\ILSVRC\Data\CLS-LOC\t
 # "rob_teacher_spcasa9"
 # "rob_teacher_tecoa"
 # "rob_teacher_fare"
-ABLATION_NAME = "rob_teacher_tecoa"
+ABLATION_NAME = "rob_teacher_spcasa9"
 
 
-BASE_SAVE_DIR = r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs"
+BASE_SAVE_DIR = os.path.join(DEFAULT_OUTPUT_ROOT, "sart_ablation_runs")
 SAVE_DIR = os.path.join(BASE_SAVE_DIR, f"sart_ablation_{ABLATION_NAME}")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -56,19 +66,21 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 # ============================================================
 
 CKPT_SP_CASA_EPOCH9_EMA = (
-    r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_train\epoch_9_ema.pt"
+    os.path.join(DEFAULT_CKPT_ROOT, "SP_CASA", "epoch_9_ema.pt")
 )
 
-CKPT_TECOA = r"E:\DeepLearning\CLIP-adv-ssl-train\TeCoA\tecoa_official_full_clip.pt"
+CKPT_TECOA = os.path.join(DEFAULT_CKPT_ROOT, "TeCoA", "tecoa_official_full_clip.pt")
 
-CKPT_FARE = r"E:\DeepLearning\CLIP-adv-ssl-train\FARE\fare_vitb32_eps1_full_clip.pt"
+CKPT_FARE = os.path.join(DEFAULT_CKPT_ROOT, "FARE", "fare_vitb32_eps1_full_clip.pt")
 
 WARM_START_CKPT = CKPT_SP_CASA_EPOCH9_EMA
 
 ROBUST_TEACHER_CKPT = CKPT_SP_CASA_EPOCH9_EMA
+USER_WARM_START_CKPT: Optional[str] = None
+USER_ROBUST_TEACHER_CKPT: Optional[str] = None
 
 SEM_DESC_JSON = (
-    r"E:\DeepLearning\CLIP-adv-ssl-train\sem_desc_all_datasets_fg_bias_hybrid.json"
+    os.path.join(REPO_ROOT, "prompt", "sem_desc_all_datasets_fg_bias_hybrid.json")
 )
 
 BATCH_SIZE = 64
@@ -746,9 +758,131 @@ def pgd_attack_prompt_ensemble(
 # ============================================================
 # Main
 # ============================================================
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train Stage-II SART-CLIP.")
+    parser.add_argument(
+        "--train-path",
+        default=TRAIN_PATH,
+        help="ImageNet train directory in torchvision ImageFolder format.",
+    )
+    parser.add_argument(
+        "--sem-desc-json",
+        default=SEM_DESC_JSON,
+        help="Semantic description JSON used to build source-class prompt banks.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=BASE_SAVE_DIR,
+        help="Directory for SART-CLIP run outputs.",
+    )
+    parser.add_argument(
+        "--ckpt-root",
+        default=DEFAULT_CKPT_ROOT,
+        help="Root directory containing pretrained checkpoints.",
+    )
+    parser.add_argument(
+        "--warm-start-ckpt",
+        default=None,
+        help="Optional explicit warm-start checkpoint. Overrides the ablation default.",
+    )
+    parser.add_argument(
+        "--robust-teacher-ckpt",
+        default=None,
+        help="Optional explicit robust-teacher checkpoint. Overrides the ablation default.",
+    )
+    parser.add_argument(
+        "--tecoa-ckpt",
+        default=None,
+        help="Optional TeCoA checkpoint path for --ablation-name rob_teacher_tecoa.",
+    )
+    parser.add_argument(
+        "--fare-ckpt",
+        default=None,
+        help="Optional FARE checkpoint path for --ablation-name rob_teacher_fare.",
+    )
+    parser.add_argument(
+        "--ablation-name",
+        default=ABLATION_NAME,
+        choices=[
+            "full",
+            "wo_robust_teacher",
+            "wo_semantic_kl",
+            "wo_feature_alignment",
+            "wo_clean_adv_consistency",
+            "wo_style_consistency",
+            "no_warm_start",
+            "last2",
+            "last4",
+            "last6",
+            "train_all_visual",
+            "rob_teacher_spcasa9",
+            "rob_teacher_tecoa",
+            "rob_teacher_fare",
+        ],
+        help="Stage-II ablation setting.",
+    )
+    parser.add_argument("--epochs", type=int, default=EPOCHS)
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--grad-accum", type=int, default=GRAD_ACCUM)
+    parser.add_argument("--num-workers", type=int, default=NUM_WORKERS)
+    return parser.parse_args()
+
+
+def configure_from_args(args: argparse.Namespace) -> None:
+    global TRAIN_PATH
+    global SEM_DESC_JSON
+    global BASE_SAVE_DIR, SAVE_DIR
+    global CKPT_SP_CASA_EPOCH9_EMA, CKPT_TECOA, CKPT_FARE
+    global WARM_START_CKPT, ROBUST_TEACHER_CKPT
+    global USER_WARM_START_CKPT, USER_ROBUST_TEACHER_CKPT
+    global ABLATION_NAME
+    global EPOCHS, BATCH_SIZE, GRAD_ACCUM, NUM_WORKERS
+
+    TRAIN_PATH = args.train_path
+    SEM_DESC_JSON = args.sem_desc_json
+    BASE_SAVE_DIR = args.output_dir
+    ABLATION_NAME = args.ablation_name
+
+    CKPT_SP_CASA_EPOCH9_EMA = os.path.join(
+        args.ckpt_root, "SP_CASA", "epoch_9_ema.pt"
+    )
+    CKPT_TECOA = args.tecoa_ckpt or os.path.join(
+        args.ckpt_root, "TeCoA", "tecoa_official_full_clip.pt"
+    )
+    CKPT_FARE = args.fare_ckpt or os.path.join(
+        args.ckpt_root, "FARE", "fare_vitb32_eps1_full_clip.pt"
+    )
+    WARM_START_CKPT = CKPT_SP_CASA_EPOCH9_EMA
+    ROBUST_TEACHER_CKPT = CKPT_SP_CASA_EPOCH9_EMA
+    USER_WARM_START_CKPT = args.warm_start_ckpt
+    USER_ROBUST_TEACHER_CKPT = args.robust_teacher_ckpt
+
+    EPOCHS = args.epochs
+    BATCH_SIZE = args.batch_size
+    GRAD_ACCUM = args.grad_accum
+    NUM_WORKERS = args.num_workers
+
+    SAVE_DIR = os.path.join(BASE_SAVE_DIR, f"sart_ablation_{ABLATION_NAME}")
+    os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+def apply_runtime_checkpoint_overrides() -> None:
+    global WARM_START_CKPT, ROBUST_TEACHER_CKPT
+
+    if USER_WARM_START_CKPT is not None:
+        WARM_START_CKPT = USER_WARM_START_CKPT
+        print(f"[Runtime Override] WARM_START_CKPT = {WARM_START_CKPT}")
+
+    if USER_ROBUST_TEACHER_CKPT is not None:
+        ROBUST_TEACHER_CKPT = USER_ROBUST_TEACHER_CKPT
+        print(f"[Runtime Override] ROBUST_TEACHER_CKPT = {ROBUST_TEACHER_CKPT}")
+
+
 def main() -> None:
+    configure_from_args(parse_args())
     set_seed(SEED)
     apply_ablation_config()
+    apply_runtime_checkpoint_overrides()
 
     print(f"Device: {DEVICE}")
     print(f"[Save Dir] {SAVE_DIR}")

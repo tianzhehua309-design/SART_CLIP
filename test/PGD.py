@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import csv
@@ -23,10 +24,36 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_WORKERS = 4
 MAX_EXAMPLES_PER_DATASET = 1000 
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DATA_ROOT = os.environ.get("SART_DATA_ROOT", os.path.join(REPO_ROOT, "data"))
+DEFAULT_CKPT_ROOT = os.environ.get(
+    "SART_CKPT_ROOT", os.path.join(REPO_ROOT, "checkpoint")
+)
+DEFAULT_OUTPUT_ROOT = os.environ.get(
+    "SART_OUTPUT_ROOT", os.path.join(REPO_ROOT, "outputs")
+)
+
+
+def data_path(*parts: str) -> str:
+    return os.path.join(DEFAULT_DATA_ROOT, *parts)
+
+
+def ckpt_path(*parts: str) -> str:
+    return os.path.join(DEFAULT_CKPT_ROOT, *parts)
+
+
+def dataset_root(*parts: str) -> Dict:
+    return {"root": data_path(*parts), "root_parts": parts}
+
+
+def method_ckpt(*parts: str) -> Dict:
+    return {"ckpt": ckpt_path(*parts), "ckpt_parts": parts}
+
+
 USE_PROMPT_ENSEMBLE_HEAD = True
 PROMPT_BANKS_TO_USE = ("core", "attr", "desc", "robust")
 SEM_DESC_JSON = (
-    r"E:\DeepLearning\CLIP-adv-ssl-train\sem_desc_all_datasets_fg_bias_hybrid.json"
+    os.path.join(REPO_ROOT, "prompt", "sem_desc_all_datasets_fg_bias_hybrid.json")
 )
 ALLOW_MISSING_SEM_DESC = True
 TOPK_DESC = 8
@@ -42,87 +69,87 @@ METHODS = [
     },
     {
         "name": "sp_casa_epoch9",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_train\epoch_9.pt",
+        **method_ckpt("SP_CASA", "epoch_9.pt"),
     },
     {
         "name": "sp_casa_epoch9_ema",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_train\epoch_9_ema.pt",
+        **method_ckpt("SP_CASA", "epoch_9_ema.pt"),
     },
     {
         "name": "sp_casa_full_short",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_ablation_runs\sp_casa_full_short\epoch_1_ema.pt",
+        **method_ckpt("SP_CASA_ablation_runs", "sp_casa_full_short", "epoch_1_ema.pt"),
     },
     {
         "name": "core_only_attack",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_ablation_runs\core_only_attack\epoch_1_ema.pt",
+        **method_ckpt("SP_CASA_ablation_runs", "core_only_attack", "epoch_1_ema.pt"),
     },
     {
         "name": "wo_confuser",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_ablation_runs\wo_confuser\epoch_1_ema.pt",
+        **method_ckpt("SP_CASA_ablation_runs", "wo_confuser", "epoch_1_ema.pt"),
     },
     {
         "name": "wo_prompt_consistency",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_ablation_runs\wo_prompt_consistency\epoch_1_ema.pt",
+        **method_ckpt("SP_CASA_ablation_runs", "wo_prompt_consistency", "epoch_1_ema.pt"),
     },
     {
         "name": "wo_robust_bank",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_ablation_runs\wo_robust_bank\epoch_1_ema.pt",
+        **method_ckpt("SP_CASA_ablation_runs", "wo_robust_bank", "epoch_1_ema.pt"),
     },
     {
         "name": "sart_clip_semjson_source_only",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_clip_semjson_source_only\epoch_1_ema.pt",
+        **method_ckpt("SART", "epoch_1_ema.pt"),
     },
     {
         "name": "sart_clip_semjson_source_only_sem_desc_imagenet_fg_bias",
-        "ckpt": "E:\DeepLearning\CLIP-adv-ssl-train\sart_clip_semjson_source_only_sem_desc_imagenet_fg_bias\epoch_1_ema.pt    "
+        **method_ckpt("SART", "epoch_1_ema.pt"),
     },
     {
         "name": "adv_ft_repro",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\repro_baselines_for_sart\adv_ft\epoch_10.pt",
+        **method_ckpt("baselines", "adv_ft", "epoch_10.pt"),
     },
     {
         "name": "tecoa_official_ckpt",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\TeCoA\tecoa_official_full_clip.pt",
+        **method_ckpt("TeCoA", "tecoa_official_full_clip.pt"),
     },
     {
         "name": "pmg_aft_repro",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\repro_baselines_for_sart\pmg_aft\epoch_10.pt",
+        **method_ckpt("baselines", "pmg_aft", "epoch_10.pt"),
     },
     {
     "name": "fare_vitb32_eps1_official",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\FARE\fare_vitb32_eps1_full_clip.pt",
+    **method_ckpt("FARE", "fare_vitb32_eps1_full_clip.pt"),
     },
     {
     "name": "wo_robust_teacher",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_wo_robust_teacher\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_wo_robust_teacher", "epoch_1_ema.pt"),
     },
     {
     "name": "wo_semantic_kl",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_wo_semantic_kl\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_wo_semantic_kl", "epoch_1_ema.pt"),
     },
     {
     "name": "wo_feature_alignment",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_wo_feature_alignment\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_wo_feature_alignment", "epoch_1_ema.pt"),
     },
     {
     "name": "wo_clean_adv_consistency",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_wo_clean_adv_consistency\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_wo_clean_adv_consistency", "epoch_1_ema.pt"),
     },
     {
     "name": "wo_style_consistency",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_wo_style_consistency\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_wo_style_consistency", "epoch_1_ema.pt"),
     },
     {
     "name": "no_warm_start",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_no_warm_start\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_no_warm_start", "epoch_1_ema.pt"),
     },
     {
     "name": "last2",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_last2\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_last2", "epoch_1_ema.pt"),
     },
     {
     "name": "last6",
-    "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_last6\epoch_1_ema.pt",
+    **method_ckpt("SART_ablation_runs", "sart_ablation_last6", "epoch_1_ema.pt"),
     },
     {
         "name": "original_clip_vit_b16",
@@ -132,17 +159,17 @@ METHODS = [
     {
         "name": "sp_casa_vit_b16_short",
         "model_name": "ViT-B/16",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_backbone_runs\sp_casa_vit_b16_short\last_ema.pt",
+        **method_ckpt("SP_CASA_backbone_runs", "sp_casa_vit_b16_short", "last_ema.pt"),
     },
     {
         "name": "sart_vit_b16_short",
         "model_name": "ViT-B/16",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_backbone_runs\sart_vit_b16_short\last_ema.pt",
+        **method_ckpt("SART_backbone_runs", "sart_vit_b16_short", "last_ema.pt"),
     },
     {
         "name": "ablation_rob_teacher_tecoa",
         "model_name": "ViT-B/32",
-        "ckpt": r"E:\DeepLearning\CLIP-adv-ssl-train\sart_ablation_runs\sart_ablation_rob_teacher_tecoa\epoch_1_ema.pt",
+        **method_ckpt("SART_ablation_runs", "sart_ablation_rob_teacher_tecoa", "epoch_1_ema.pt"),
     },
 ]
 
@@ -154,21 +181,21 @@ DATASETS = [
     {
         "name": "caltech101",
         "type": "imagefolder",
-        "root": r"E:\DeepLearning\Datasets\Caltech101\101_ObjectCategories",
+        **dataset_root("Caltech101", "101_ObjectCategories"),
         "class_mode": "caltech101",
         "prompt_mode": "object",
     },
     {
         "name": "caltech256",
         "type": "imagefolder",
-        "root": r"E:\DeepLearning\Datasets\Caltech256\Caltech256\256_ObjectCategories",
+        **dataset_root("Caltech256", "Caltech256", "256_ObjectCategories"),
         "class_mode": "caltech256",
         "prompt_mode": "object",
     },
     {
         "name": "cifar100",
         "type": "cifar100",
-        "root": r"E:\DeepLearning\Datasets\cifar-100-python\cifar-100-python",
+        **dataset_root("cifar100"),
         "train": False,
         "download": True,
         "class_mode": "default",
@@ -177,7 +204,7 @@ DATASETS = [
     {
         "name": "cifar10",
         "type": "cifar10",
-        "root": r"E:\DeepLearning\Datasets\cifar10\cifar10\cifar-10-batches-py",
+        **dataset_root("cifar10"),
         "train": False,
         "download": True,
         "class_mode": "default",
@@ -186,7 +213,7 @@ DATASETS = [
     {
         "name": "dtd",
         "type": "dtd",
-        "root": r"E:\DeepLearning\Datasets\DTD\DTD\dtd",
+        **dataset_root("DTD"),
         "split": "test",
         "download": True,
         "class_mode": "default",
@@ -195,7 +222,7 @@ DATASETS = [
     {
         "name": "eurosat",
         "type": "eurosat",
-        "root": r"E:\DeepLearning\Datasets\EuroSAT\EuroSAT\eurosat",
+        **dataset_root("EuroSAT"),
         "download": True,
         "class_mode": "eurosat",
         "prompt_mode": "satellite",
@@ -204,7 +231,7 @@ DATASETS = [
     {
         "name": "fgvc_aircraft",
         "type": "fgvc_aircraft",
-        "root": r"E:\DeepLearning\Datasets\fgvc-aircraft-2013b\fgvc-aircraft-2013b\data",
+        **dataset_root("FGVCAircraft"),
         "split": "test",
         "annotation_level": "variant",
         "download": True,
@@ -214,7 +241,7 @@ DATASETS = [
     {
         "name": "flowers102",
         "type": "flowers102",
-        "root": r"E:\DeepLearning\Datasets\Flowers102\Flowers102",
+        **dataset_root("Flowers102"),
         "split": "test",
         "download": True,
         "class_mode": "flowers102_fixed",
@@ -223,7 +250,7 @@ DATASETS = [
     {
         "name": "food101",
         "type": "food101",
-        "root": r"E:\DeepLearning\Datasets\food-101",
+        **dataset_root("food-101"),
         "split": "test",
         "download": True,
         "class_mode": "underscore_to_space",
@@ -232,7 +259,7 @@ DATASETS = [
     {
         "name": "hateful_memes",
         "type": "hateful_memes",
-        "root": r"E:\DeepLearning\Datasets\Hateful Memes\Hateful Memes",
+        **dataset_root("Hateful Memes"),
         "split": "dev",
         "class_mode": "hateful_memes",
         "prompt_mode": "hateful_memes",
@@ -241,14 +268,14 @@ DATASETS = [
     {
         "name": "imagenet",
         "type": "imagefolder",
-        "root": r"E:\DeepLearning\Datasets\ImageNet_extracted\ILSVRC\Data\CLS-LOC\val_imagefolder",
+        **dataset_root("ImageNet", "val_imagefolder"),
         "class_mode": "imagenet_synset",
         "prompt_mode": "object",
     },
     {
         "name": "oxfordpets",
         "type": "oxfordpets",
-        "root": r"E:\DeepLearning\Datasets\OxfordPets",
+        **dataset_root("OxfordPets"),
         "split": "test",
         "target_types": "category",
         "download": True,
@@ -258,7 +285,7 @@ DATASETS = [
     {
         "name": "pcam",
         "type": "pcam",
-        "root": r"E:\DeepLearning\Datasets\PCAM\PCAM",
+        **dataset_root("PCAM"),
         "split": "test",
         "download": True,
         "class_mode": "pcam",
@@ -268,7 +295,7 @@ DATASETS = [
     {
         "name": "stanford_cars",
         "type": "imagefolder",
-        "root": r"E:\DeepLearning\Datasets\StanfordCars\StanfordCars\test",
+        **dataset_root("StanfordCars", "test"),
         "class_mode": "default",
         "prompt_mode": "car",
     },
@@ -284,7 +311,7 @@ DATASETS = [
     {
     "name": "sun397",
     "type": "imagefolder",
-    "root": r"E:\DeepLearning\Datasets\SUN397_test01_imagefolder",
+    **dataset_root("SUN397_test01_imagefolder"),
     "class_mode": "default",
     "prompt_mode": "scene",
     "download": False,
@@ -1219,9 +1246,93 @@ PGD_RESTARTS = 1
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTS_CSV = os.path.join(
-    SCRIPT_DIR,
-    "robust_teacher_tecoa_evaluation.csv",
+    DEFAULT_OUTPUT_ROOT,
+    "evaluation",
+    "pgd100_results.csv",
 )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Evaluate CLIP checkpoints with PGD.")
+    parser.add_argument(
+        "--data-root",
+        default=DEFAULT_DATA_ROOT,
+        help="Root directory containing evaluation datasets.",
+    )
+    parser.add_argument(
+        "--ckpt-root",
+        default=DEFAULT_CKPT_ROOT,
+        help="Root directory containing model checkpoints.",
+    )
+    parser.add_argument(
+        "--sem-desc-json",
+        default=SEM_DESC_JSON,
+        help="Semantic description JSON used by prompt-ensemble evaluation.",
+    )
+    parser.add_argument(
+        "--results-csv",
+        default=RESULTS_CSV,
+        help="Path to the output CSV file.",
+    )
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        default=None,
+        help="Optional list of method names to evaluate.",
+    )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=None,
+        help="Optional list of dataset names to evaluate.",
+    )
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--num-workers", type=int, default=NUM_WORKERS)
+    parser.add_argument(
+        "--max-examples",
+        type=int,
+        default=MAX_EXAMPLES_PER_DATASET,
+        help="Balanced sample cap per dataset. Use 0 to evaluate all examples.",
+    )
+    return parser.parse_args()
+
+
+def configure_from_args(args: argparse.Namespace) -> None:
+    global SEM_DESC_JSON, RESULTS_CSV
+    global BATCH_SIZE, NUM_WORKERS, MAX_EXAMPLES_PER_DATASET
+    global METHODS, DATASETS
+
+    SEM_DESC_JSON = args.sem_desc_json
+    RESULTS_CSV = args.results_csv
+    BATCH_SIZE = args.batch_size
+    NUM_WORKERS = args.num_workers
+    MAX_EXAMPLES_PER_DATASET = None if args.max_examples == 0 else args.max_examples
+
+    for method_cfg in METHODS:
+        if "ckpt_parts" in method_cfg:
+            method_cfg["ckpt"] = os.path.join(args.ckpt_root, *method_cfg["ckpt_parts"])
+
+    for dataset_cfg in DATASETS:
+        if "root_parts" in dataset_cfg:
+            dataset_cfg["root"] = os.path.join(
+                args.data_root, *dataset_cfg["root_parts"]
+            )
+
+    if args.methods:
+        wanted_methods = set(args.methods)
+        METHODS = [m for m in METHODS if m["name"] in wanted_methods]
+        missing_methods = wanted_methods - {m["name"] for m in METHODS}
+        if missing_methods:
+            raise ValueError(f"Unknown method(s): {sorted(missing_methods)}")
+
+    if args.datasets:
+        wanted_datasets = set(args.datasets)
+        DATASETS = [d for d in DATASETS if d["name"] in wanted_datasets]
+        missing_datasets = wanted_datasets - {d["name"] for d in DATASETS}
+        if missing_datasets:
+            raise ValueError(f"Unknown dataset(s): {sorted(missing_datasets)}")
+
+    os.makedirs(os.path.dirname(os.path.abspath(RESULTS_CSV)), exist_ok=True)
 
 
 def get_attack_alpha(epsilon: float) -> float:
@@ -1445,6 +1556,7 @@ def append_one_result(csv_path: str, row: dict) -> None:
 
 
 def main() -> None:
+    configure_from_args(parse_args())
     set_seed(SEED)
 
     done_triples = load_done_triples(RESULTS_CSV)

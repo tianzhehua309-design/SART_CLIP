@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import csv
@@ -23,9 +24,37 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_WORKERS = 4
 MAX_EXAMPLES_PER_DATASET = None 
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DATA_ROOT = os.environ.get("SART_DATA_ROOT", os.path.join(REPO_ROOT, "data"))
+DEFAULT_CKPT_ROOT = os.environ.get(
+    "SART_CKPT_ROOT", os.path.join(REPO_ROOT, "checkpoint")
+)
+DEFAULT_OUTPUT_ROOT = os.environ.get(
+    "SART_OUTPUT_ROOT", os.path.join(REPO_ROOT, "outputs")
+)
+
+
+def data_path(*parts: str) -> str:
+    return os.path.join(DEFAULT_DATA_ROOT, *parts)
+
+
+def ckpt_path(*parts: str) -> str:
+    return os.path.join(DEFAULT_CKPT_ROOT, *parts)
+
+
+def dataset_root(*parts: str) -> Dict:
+    return {"root": data_path(*parts), "root_parts": parts}
+
+
+def method_ckpt(*parts: str) -> Dict:
+    return {"ckpt": ckpt_path(*parts), "ckpt_parts": parts}
+
+
 USE_PROMPT_ENSEMBLE_HEAD = True
 PROMPT_BANKS_TO_USE = ("core", "attr", "desc", "robust") 
-SEM_DESC_JSON = r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\sem_desc_all_datasets_fg_bias_hybrid.json"
+SEM_DESC_JSON = os.path.join(
+    REPO_ROOT, "prompt", "sem_desc_all_datasets_fg_bias_hybrid.json"
+)
 ALLOW_MISSING_SEM_DESC = True
 TOPK_DESC = 8
 
@@ -37,35 +66,35 @@ METHODS = [
     {"name": "clip_vit_b32", "ckpt": None},
     {
         "name": "baseline_adv_ssl",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\adv_clip_fixed\epoch_10.pt",
+        **method_ckpt("baselines", "adv_clip_fixed", "epoch_10.pt"),
     },
     {
         "name": "sager_clip_lite_memopt",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\sager_clip_lite_memopt\epoch_10.pt",
+        **method_ckpt("baselines", "sager_clip_lite_memopt", "epoch_10.pt"),
     },
     {
         "name": "lsaa_sager",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\lsaa_sager\epoch_3.pt",
+        **method_ckpt("baselines", "lsaa_sager", "epoch_3.pt"),
     },
     {
         "name": "lsaa_sager_sem_desc",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\lsaa_sager_sem_desc\epoch_3.pt",
+        **method_ckpt("baselines", "lsaa_sager_sem_desc", "epoch_3.pt"),
     },
     {
         "name": "sp_casa_epoch10",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\sp_casa_train\epoch_10.pt",
+        **method_ckpt("SP_CASA", "epoch_10.pt"),
     },
     {
         "name": "sp_casa_epoch9_ema",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\sp_casa_train\epoch_9_ema.pt",
+        **method_ckpt("SP_CASA", "epoch_9_ema.pt"),
     },
     {
         "name": "sart_clip_semjson_source_only",
-        "ckpt": r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\sart_clip_semjson_source_only\epoch_1_ema.pt",
+        **method_ckpt("SART", "epoch_1_ema.pt"),
     },
     {
         "name": "sart_clip_semjson_source_only_sem_desc_imagenet_fg_bias",
-        "ckpt": "E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train\sart_clip_semjson_source_only_sem_desc_imagenet_fg_bias\epoch_1_ema.pt",
+        **method_ckpt("SART", "epoch_1_ema.pt"),
     },
 ]
 
@@ -77,21 +106,21 @@ DATASETS = [
     {
         "name": "caltech101",
         "type": "imagefolder",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\Caltech101\101_ObjectCategories",
+        **dataset_root("Caltech101", "101_ObjectCategories"),
         "class_mode": "caltech101",
         "prompt_mode": "object",
     },
     {
         "name": "caltech256",
         "type": "imagefolder",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\Caltech256\256_ObjectCategories",
+        **dataset_root("Caltech256", "256_ObjectCategories"),
         "class_mode": "caltech256",
         "prompt_mode": "object",
     },
     {
         "name": "cifar100",
         "type": "cifar100",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets",
+        **dataset_root("cifar100"),
         "train": False,
         "download": True,
         "class_mode": "default",
@@ -100,7 +129,7 @@ DATASETS = [
     {
         "name": "cifar10",
         "type": "cifar10",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\cifar10",
+        **dataset_root("cifar10"),
         "train": False,
         "download": True,
         "class_mode": "default",
@@ -109,7 +138,7 @@ DATASETS = [
     {
         "name": "dtd",
         "type": "dtd",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\DTD",
+        **dataset_root("DTD"),
         "split": "test",
         "download": True,
         "class_mode": "default",
@@ -118,7 +147,7 @@ DATASETS = [
     {
         "name": "eurosat",
         "type": "eurosat",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\EuroSAT",
+        **dataset_root("EuroSAT"),
         "download": True,
         "class_mode": "eurosat",
         "prompt_mode": "satellite",
@@ -127,7 +156,7 @@ DATASETS = [
     {
         "name": "fgvc_aircraft",
         "type": "fgvc_aircraft",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\FGVCAircraft",
+        **dataset_root("FGVCAircraft"),
         "split": "test",
         "annotation_level": "variant",
         "download": True,
@@ -137,7 +166,7 @@ DATASETS = [
     {
         "name": "flowers102",
         "type": "flowers102",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\Flowers102",
+        **dataset_root("Flowers102"),
         "split": "test",
         "download": True,
         "class_mode": "flowers102_fixed",
@@ -146,7 +175,7 @@ DATASETS = [
     {
         "name": "food101",
         "type": "food101",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\food-101",
+        **dataset_root("food-101"),
         "split": "test",
         "download": True,
         "class_mode": "underscore_to_space",
@@ -155,7 +184,7 @@ DATASETS = [
     {
         "name": "hateful_memes",
         "type": "hateful_memes",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\Hateful Memes",
+        **dataset_root("Hateful Memes"),
         "split": "dev",
         "class_mode": "hateful_memes",
         "prompt_mode": "hateful_memes",
@@ -164,14 +193,14 @@ DATASETS = [
     {
         "name": "imagenet",
         "type": "imagefolder",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\imageNet\ILSVRC\Data\CLS-LOC\val",
+        **dataset_root("ImageNet", "val_imagefolder"),
         "class_mode": "imagenet_synset",
         "prompt_mode": "object",
     },
     {
         "name": "oxfordpets",
         "type": "oxfordpets",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\OxfordPets",
+        **dataset_root("OxfordPets"),
         "split": "test",
         "target_types": "category",
         "download": True,
@@ -181,7 +210,7 @@ DATASETS = [
     {
         "name": "pcam",
         "type": "pcam",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\PCAM",
+        **dataset_root("PCAM"),
         "split": "test",
         "download": True,
         "class_mode": "pcam",
@@ -191,14 +220,14 @@ DATASETS = [
     {
         "name": "stanford_cars",
         "type": "imagefolder",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\StanfordCars\test",
+        **dataset_root("StanfordCars", "test"),
         "class_mode": "default",
         "prompt_mode": "car",
     },
     {
         "name": "stl10",
         "type": "stl10",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets",
+        **dataset_root("stl10"),
         "split": "test",
         "download": True,
         "class_mode": "default",
@@ -207,7 +236,7 @@ DATASETS = [
     {
         "name": "sun397",
         "type": "sun397",
-        "root": r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets\SUN",
+        **dataset_root("SUN397"),
         "download": True,
         "class_mode": "sun397",
         "prompt_mode": "scene",
@@ -1155,7 +1184,92 @@ EVAL_BATCH_SIZE = 64
 ATTACK_BATCH_SIZE = 16 
 EPSILON = 1 / 255
 ATTACK_PRESET = "fast" 
-RESULTS_CSV = "sp_casa_aa_standard_core_attr_desc_domain_semjson_source.csv"
+RESULTS_CSV = os.path.join(DEFAULT_OUTPUT_ROOT, "evaluation", "aa_fast_results.csv")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Evaluate CLIP checkpoints with AA-fast.")
+    parser.add_argument(
+        "--data-root",
+        default=DEFAULT_DATA_ROOT,
+        help="Root directory containing evaluation datasets.",
+    )
+    parser.add_argument(
+        "--ckpt-root",
+        default=DEFAULT_CKPT_ROOT,
+        help="Root directory containing model checkpoints.",
+    )
+    parser.add_argument(
+        "--sem-desc-json",
+        default=SEM_DESC_JSON,
+        help="Semantic description JSON used by prompt-ensemble evaluation.",
+    )
+    parser.add_argument(
+        "--results-csv",
+        default=RESULTS_CSV,
+        help="Path to the output CSV file.",
+    )
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        default=None,
+        help="Optional list of method names to evaluate.",
+    )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=None,
+        help="Optional list of dataset names to evaluate.",
+    )
+    parser.add_argument("--eval-batch-size", type=int, default=EVAL_BATCH_SIZE)
+    parser.add_argument("--attack-batch-size", type=int, default=ATTACK_BATCH_SIZE)
+    parser.add_argument("--num-workers", type=int, default=NUM_WORKERS)
+    parser.add_argument(
+        "--max-examples",
+        type=int,
+        default=MAX_EXAMPLES_PER_DATASET,
+        help="Balanced sample cap per dataset. Use 0 to evaluate all examples.",
+    )
+    return parser.parse_args()
+
+
+def configure_from_args(args: argparse.Namespace) -> None:
+    global SEM_DESC_JSON, RESULTS_CSV
+    global EVAL_BATCH_SIZE, ATTACK_BATCH_SIZE, NUM_WORKERS, MAX_EXAMPLES_PER_DATASET
+    global METHODS, DATASETS
+
+    SEM_DESC_JSON = args.sem_desc_json
+    RESULTS_CSV = args.results_csv
+    EVAL_BATCH_SIZE = args.eval_batch_size
+    ATTACK_BATCH_SIZE = args.attack_batch_size
+    NUM_WORKERS = args.num_workers
+    MAX_EXAMPLES_PER_DATASET = None if args.max_examples == 0 else args.max_examples
+
+    for method_cfg in METHODS:
+        if "ckpt_parts" in method_cfg:
+            method_cfg["ckpt"] = os.path.join(args.ckpt_root, *method_cfg["ckpt_parts"])
+
+    for dataset_cfg in DATASETS:
+        if "root_parts" in dataset_cfg:
+            dataset_cfg["root"] = os.path.join(
+                args.data_root, *dataset_cfg["root_parts"]
+            )
+
+    if args.methods:
+        wanted_methods = set(args.methods)
+        METHODS = [m for m in METHODS if m["name"] in wanted_methods]
+        missing_methods = wanted_methods - {m["name"] for m in METHODS}
+        if missing_methods:
+            raise ValueError(f"Unknown method(s): {sorted(missing_methods)}")
+
+    if args.datasets:
+        wanted_datasets = set(args.datasets)
+        DATASETS = [d for d in DATASETS if d["name"] in wanted_datasets]
+        missing_datasets = wanted_datasets - {d["name"] for d in DATASETS}
+        if missing_datasets:
+            raise ValueError(f"Unknown dataset(s): {sorted(missing_datasets)}")
+
+    os.makedirs(os.path.dirname(os.path.abspath(RESULTS_CSV)), exist_ok=True)
 
 
 @torch.no_grad()
@@ -1254,6 +1368,7 @@ def evaluate_autoattack(
 
 
 def main() -> None:
+    configure_from_args(parse_args())
     set_seed(SEED)
     rows = []
 

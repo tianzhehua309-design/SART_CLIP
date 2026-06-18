@@ -3,6 +3,7 @@
 SP-CASA
 """
 
+import argparse
 import os
 import json
 import copy
@@ -23,6 +24,12 @@ import clip
 # =========================
 # Config
 # =========================
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DATA_ROOT = os.environ.get("SART_DATA_ROOT", os.path.join(REPO_ROOT, "data"))
+DEFAULT_OUTPUT_ROOT = os.environ.get(
+    "SART_OUTPUT_ROOT", os.path.join(REPO_ROOT, "outputs")
+)
+
 BATCH_SIZE = 64
 GRAD_ACCUM = 2
 
@@ -46,15 +53,15 @@ SEED = 42
 USE_AMP = torch.cuda.is_available()
 NUM_WORKERS = 4
 
-TRAIN_PATH = r"E:\DeepLearning\Datasets\ImageNet_extracted\ILSVRC\Data\CLS-LOC\train"
+TRAIN_PATH = os.path.join(DEFAULT_DATA_ROOT, "ImageNet", "train")
 
-BASE_SAVE_DIR = r"E:\DeepLearning\CLIP-adv-ssl-train\sp_casa_ablation_runs"
+BASE_SAVE_DIR = os.path.join(DEFAULT_OUTPUT_ROOT, "sp_casa_ablation_runs")
 SAVE_DIR = os.path.join(BASE_SAVE_DIR, f"{ABLATION_NAME}")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 WARM_START_CKPT = None
 
-SEM_DESC_JSON = r"E:\DeepLearning\CLIP-adv-ssl-train\sem_desc_imagenet_fg_bias.json"
+SEM_DESC_JSON = os.path.join(REPO_ROOT, "prompt", "sem_desc_imagenet_fg_bias.json")
 ALLOW_MISSING_SEM_DESC = True
 
 # Base adversarial budget (pixel-space)
@@ -799,7 +806,72 @@ def pgd_attack_pixel_space(
 # =========================
 # Main
 # =========================
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train Stage-I SP-CASA.")
+    parser.add_argument(
+        "--train-path",
+        default=TRAIN_PATH,
+        help="ImageNet train directory in torchvision ImageFolder format.",
+    )
+    parser.add_argument(
+        "--sem-desc-json",
+        default=SEM_DESC_JSON,
+        help="Semantic description JSON for ImageNet source classes.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=BASE_SAVE_DIR,
+        help="Directory for SP-CASA run outputs.",
+    )
+    parser.add_argument(
+        "--warm-start-ckpt",
+        default=WARM_START_CKPT,
+        help="Optional checkpoint used to initialize CLIP before SP-CASA training.",
+    )
+    parser.add_argument(
+        "--ablation-name",
+        default=ABLATION_NAME,
+        choices=[
+            "sp_casa_full",
+            "core_only_attack",
+            "wo_confuser",
+            "wo_prompt_consistency",
+            "wo_robust_bank",
+        ],
+        help="SP-CASA ablation setting.",
+    )
+    parser.add_argument("--epochs", type=int, default=EPOCHS)
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--grad-accum", type=int, default=GRAD_ACCUM)
+    parser.add_argument("--num-workers", type=int, default=NUM_WORKERS)
+    parser.add_argument("--max-train-steps", type=int, default=MAX_TRAIN_STEPS)
+    return parser.parse_args()
+
+
+def configure_from_args(args: argparse.Namespace) -> None:
+    global TRAIN_PATH
+    global SEM_DESC_JSON
+    global BASE_SAVE_DIR, SAVE_DIR
+    global WARM_START_CKPT
+    global ABLATION_NAME
+    global EPOCHS, BATCH_SIZE, GRAD_ACCUM, NUM_WORKERS, MAX_TRAIN_STEPS
+
+    TRAIN_PATH = args.train_path
+    SEM_DESC_JSON = args.sem_desc_json
+    BASE_SAVE_DIR = args.output_dir
+    ABLATION_NAME = args.ablation_name
+    SAVE_DIR = os.path.join(BASE_SAVE_DIR, ABLATION_NAME)
+    WARM_START_CKPT = args.warm_start_ckpt
+    EPOCHS = args.epochs
+    BATCH_SIZE = args.batch_size
+    GRAD_ACCUM = args.grad_accum
+    NUM_WORKERS = args.num_workers
+    MAX_TRAIN_STEPS = args.max_train_steps
+    os.makedirs(SAVE_DIR, exist_ok=True)
+
+
 def main() -> None:
+    configure_from_args(parse_args())
     set_seed(SEED)
     apply_ablation_config()
 

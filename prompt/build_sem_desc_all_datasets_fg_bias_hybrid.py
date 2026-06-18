@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 from typing import Dict, List, Tuple, Iterable
@@ -8,11 +9,15 @@ from torchvision.datasets import ImageFolder
 # ============================================================
 # Paths
 # ============================================================
-PROJECT_DIR = r"E:\TDeepLearning\model_leaning\CLIP-main\CLIP-adv-ssl-train"
-DATA_ROOT = r"E:\TDeepLearning\model_leaning\CLIP-main\Datasets"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.environ.get("SART_DATA_ROOT", os.path.join(REPO_ROOT, "data"))
 
-BASE_IMAGENET_SEM_DESC_JSON = os.path.join(PROJECT_DIR, "sem_desc_imagenet_fg_bias.json")
-OUT_JSON = os.path.join(PROJECT_DIR, "sem_desc_all_datasets_fg_bias_hybrid.json")
+BASE_IMAGENET_SEM_DESC_JSON = os.path.join(
+    REPO_ROOT, "prompt", "sem_desc_imagenet_fg_bias.json"
+)
+OUT_JSON = os.path.join(
+    REPO_ROOT, "prompt", "sem_desc_all_datasets_fg_bias_hybrid.json"
+)
 
 INCLUDE_EUROSAT = True
 INCLUDE_DTD = True
@@ -284,7 +289,38 @@ def preview_examples(out: Dict[str, List[str]], keys: List[str]) -> None:
             print(f"\n{k}: <not found>")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build a hybrid semantic-description JSON for evaluation."
+    )
+    parser.add_argument(
+        "--data-root",
+        default=DATA_ROOT,
+        help="Dataset root used for optional ImageFolder class discovery.",
+    )
+    parser.add_argument(
+        "--base-json",
+        default=BASE_IMAGENET_SEM_DESC_JSON,
+        help="Base ImageNet semantic-description JSON.",
+    )
+    parser.add_argument(
+        "--out-json",
+        default=OUT_JSON,
+        help="Output hybrid semantic-description JSON path.",
+    )
+    return parser.parse_args()
+
+
+def configure_from_args(args: argparse.Namespace) -> None:
+    global DATA_ROOT, BASE_IMAGENET_SEM_DESC_JSON, OUT_JSON
+
+    DATA_ROOT = args.data_root
+    BASE_IMAGENET_SEM_DESC_JSON = args.base_json
+    OUT_JSON = args.out_json
+
+
 def main() -> None:
+    configure_from_args(parse_args())
     out: Dict[str, List[str]] = {}
 
     if os.path.exists(BASE_IMAGENET_SEM_DESC_JSON):
@@ -329,7 +365,7 @@ def main() -> None:
     if not INCLUDE_FOOD101:
         print("[Hybrid] skip Food101 external descs")
 
-    os.makedirs(os.path.dirname(OUT_JSON), exist_ok=True)
+    os.makedirs(os.path.dirname(os.path.abspath(OUT_JSON)), exist_ok=True)
     with open(OUT_JSON, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
 
@@ -358,8 +394,8 @@ def main() -> None:
     )
 
     print("\n[Next]")
-    print("Set SEM_DESC_JSON in PGD100 / AA scripts to:")
-    print(f"SEM_DESC_JSON = r\"{OUT_JSON}\"")
+    print("Pass this file to PGD100 / AA scripts with:")
+    print(f"--sem-desc-json \"{OUT_JSON}\"")
     print("Recommended first test:")
     print('PROMPT_BANKS_TO_USE = ("core", "attr", "desc", "domain")')
     print("TOPK_DESC = 5")
