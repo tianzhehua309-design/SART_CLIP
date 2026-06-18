@@ -309,8 +309,9 @@ If you use this repository, please cite the SART-CLIP manuscript. GitHub also re
 ```bibtex
 @misc{sartclip2026,
   title  = {SART-CLIP: Source-Domain Semantic-Preserving Robust Transfer for Zero-Shot CLIP Image Recognition},
-  author = {To be updated},
+  author = {Tianzhe Hua},
   year   = {2026},
+  institution = {Hubei University of Technology},
   note   = {Manuscript in preparation}
 }
 ```
@@ -321,4 +322,4 @@ This project builds on OpenAI CLIP and follows the zero-shot adversarial robustn
 
 ## License
 
-This project is released under the MIT License. See `LICENSE` for details.
+This project is released under the Apache License 2.0. See `LICENSE` for details.

@@ -4,11 +4,12 @@ title: "SART-CLIP: Source-Domain Semantic-Preserving Robust Transfer for Zero-Sh
 authors:
   - family-names: "Hua"
     given-names: "Tianzhe"
+    affiliation: "Hubei University of Technology"
 repository-code: "https://github.com/tianzhehua309-design/SART_CLIP"
 url: "https://github.com/tianzhehua309-design/SART_CLIP"
 date-released: "2026-06-18"
 version: "0.1.0"
-license: "MIT"
+license: "Apache-2.0"
 keywords:
   - CLIP
   - zero-shot learning
