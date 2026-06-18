@@ -5,7 +5,7 @@ Source-domain semantic-preserving robust transfer for zero-shot CLIP image recog
 This repository contains the code and pretrained checkpoints for **SART-CLIP**, a two-stage robust adaptation framework for improving the zero-shot adversarial robustness of CLIP. The method trains only on ImageNet source-domain data and evaluates zero-shot transfer robustness on ImageNet validation and 15 unseen downstream benchmarks.
 
 > Paper draft: **SART-CLIP: Source-Domain Semantic-Preserving Robust Transfer for Zero-Shot CLIP Image Recognition**
-> Status: manuscript draft. Author, venue, and citation metadata should be updated before submission.
+> Status: manuscript draft. Venue, arXiv, and DOI metadata will be updated when available.
 
 ## Overview
 
@@ -33,6 +33,8 @@ SART_CLIP/
 |-- configs/
 |   |-- sart.yaml                       # Stage-II reference configuration
 |   `-- sp_casa.yaml                    # Stage-I reference configuration
+|-- docs/
+|   `-- DATASETS.md                     # Dataset layout and preparation notes
 |-- eval/
 |   |-- eval_pgd.py                     # PGD-100 evaluation
 |   `-- eval_autoattack.py              # AA-fast evaluation
@@ -115,6 +117,8 @@ PCAM, StanfordCars, STL10, SUN397
 ```
 
 Some datasets are loaded through `torchvision.datasets`; others are expected as `ImageFolder` directories. By default, scripts look for datasets under `data/`, checkpoints under `checkpoint/`, and outputs under `outputs/`. You can override these locations with command-line arguments.
+
+See `docs/DATASETS.md` for the expected dataset directory names used by the evaluation scripts.
 
 ## Configuration
 
@@ -256,55 +260,18 @@ AA-fast uses the APGD-CE and APGD-DLR branches from AutoAttack as an adaptive-at
 
 ## Main Results
 
-The tables below summarize the average clean accuracy and robust accuracy over 16 datasets: ImageNet validation plus 15 unseen transfer benchmarks.
+The table below reproduces the paper's Table 2 for the two proposed models only. Clean accuracy uses epsilon `0/255`; robust accuracy uses PGD-100 with epsilon `1/255`. All values are top-1 accuracy (%).
 
-### Standard Single-Prompt PGD-100
-
-| Method | Clean Acc. (%) | Robust Acc. (%) |
-| --- | ---: | ---: |
-| Original CLIP | 63.12 | 3.04 |
-| Adv-FT | 62.53 | 3.30 |
-| PMG-AFT | 56.01 | 35.76 |
-| TeCoA | 53.04 | 38.28 |
-| FARE | 60.41 | 38.36 |
-| SP-CASA | 52.94 | 36.10 |
-| **SART-CLIP** | **55.03** | **39.42** |
-
-### Prompt-Ensemble PGD-100
-
-This setting uses core, attribute, description, and robust prompt banks at inference time without updating model parameters.
-
-| Method | Clean Acc. (%) | Robust Acc. (%) |
-| --- | ---: | ---: |
-| Original CLIP | 65.98 | 3.31 |
-| Adv-FT | 65.69 | 3.66 |
-| PMG-AFT | 57.18 | 35.56 |
-| TeCoA | 52.93 | 39.97 |
-| FARE | 62.49 | 39.31 |
-| SP-CASA | 53.26 | 36.57 |
-| **SART-CLIP** | **55.70** | **41.47** |
-
-### AA-fast and Perturbation Budget
-
-Under prompt-ensemble inference, SART-CLIP obtains:
-
-| Evaluation | Average Accuracy (%) |
-| --- | ---: |
-| PGD-100, epsilon `1/255` | 41.47 |
-| AA-fast, epsilon `1/255` | 40.44 |
-
-Sensitivity to the perturbation budget:
-
-| Epsilon | Average Accuracy (%) |
-| --- | ---: |
-| `0/255` | 55.70 |
-| `1/255` | 41.47 |
-| `2/255` | 27.52 |
-| `4/255` | 8.36 |
+| Model | Metric | ImageNet | CIFAR10 | STL-10 | CIFAR100 | Caltech101 | Caltech256 | SUN397 | DTD | StanfordCars | Food101 | OxfordPet | Flowers | FGVC | EuroSAT | Hateful | PCAM | Average |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| SP-CASA | Clean | 73.32 | 78.31 | 93.65 | 50.85 | 79.79 | 74.99 | 38.04 | 33.03 | 26.73 | 50.43 | 75.42 | 37.68 | 6.90 | 19.86 | 51.40 | 56.67 | 52.94 |
+| SP-CASA | Robust | 55.51 | 52.34 | 81.11 | 29.17 | 67.87 | 58.84 | 22.43 | 20.11 | 11.27 | 26.17 | 64.43 | 19.42 | 2.88 | 11.36 | 23.40 | 31.26 | 36.10 |
+| **SART-CLIP** | **Clean** | **72.52** | **82.85** | **95.11** | **55.98** | **80.59** | **76.75** | **39.83** | **33.03** | **31.51** | **55.43** | **81.79** | **39.70** | **8.55** | **21.40** | **53.00** | **52.40** | **55.03** |
+| **SART-CLIP** | **Robust** | **56.26** | **59.07** | **85.76** | **34.38** | **69.70** | **63.11** | **25.83** | **23.24** | **15.15** | **30.61** | **68.85** | **24.44** | **4.62** | **11.97** | **27.00** | **30.76** | **39.42** |
 
 ## Citation
 
-If you use this repository, please cite the SART-CLIP manuscript. GitHub also reads `CITATION.cff` and should display a "Cite this repository" button. The citation metadata is still pending; update the author and venue fields before publication:
+If you use this repository, please cite the SART-CLIP manuscript. GitHub also reads `CITATION.cff` and should display a "Cite this repository" button. Venue, arXiv, and DOI metadata will be updated after publication:
 
 ```bibtex
 @misc{sartclip2026,

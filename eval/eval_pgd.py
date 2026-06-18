@@ -302,7 +302,7 @@ DATASETS = [
     {
         "name": "stl10",
         "type": "stl10",
-        "root": r"Datasets/stl10_binary",
+        **dataset_root("stl10"),
         "split": "test",
         "download": True,
         "class_mode": "default",

@@ -1,7 +1,23 @@
-﻿__pycache__/
-*.pyc
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environments and local secrets
 .venv/
 venv/
 .env
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# Local datasets and generated experiment outputs
+data/
+datasets/
+outputs/
+results/
+runs/
+logs/
+wandb/
+*.log
+*.csv
