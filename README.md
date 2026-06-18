@@ -30,6 +30,12 @@ SART_CLIP/
 |   |   `-- epoch_1_ema.pt              # Final SART-CLIP checkpoint
 |   `-- SP_CASA/
 |       `-- epoch_9_ema.pt              # Stage-I SP-CASA EMA warm start
+|-- configs/
+|   |-- sart.yaml                       # Stage-II reference configuration
+|   `-- sp_casa.yaml                    # Stage-I reference configuration
+|-- eval/
+|   |-- eval_pgd.py                     # PGD-100 evaluation
+|   `-- eval_autoattack.py              # AA-fast evaluation
 |-- model/
 |   |-- sp_casa.py                      # Stage-I SP-CASA training
 |   `-- sart_clip.py                    # Stage-II SART-CLIP training
@@ -38,9 +44,13 @@ SART_CLIP/
 |   |-- build_sem_desc_all_datasets_fg_bias_hybrid.py
 |   |-- sem_desc_imagenet_fg_bias.json
 |   `-- sem_desc_all_datasets_fg_bias_hybrid.json
-|-- test/
-|   |-- PGD.py                          # PGD-100 evaluation
-|   `-- AA-fast.py                      # AA-fast evaluation
+|-- scripts/
+|   |-- train_sp_casa.sh
+|   |-- train_sart.sh
+|   |-- eval_pgd.sh
+|   `-- eval_autoattack.sh
+|-- CITATION.cff
+|-- LICENSE
 |-- requirements.txt                    # Portable project dependencies
 |-- .gitattributes                      # Git LFS tracking for checkpoints
 `-- .gitignore
@@ -120,6 +130,8 @@ The main scripts no longer require editing machine-specific paths in the source 
 | `--methods` | Optional subset of method names to evaluate. |
 | `--datasets` | Optional subset of dataset names to evaluate. |
 
+The `configs/` files document the reference paper settings, while the `scripts/` files provide reproducible command-line entry points.
+
 For the released checkpoints in this repository, the most important files are:
 
 ```python
@@ -151,6 +163,12 @@ python model/sp_casa.py \
   --output-dir outputs/sp_casa_ablation_runs
 ```
 
+Equivalent wrapper:
+
+```bash
+DATA_ROOT=/path/to/datasets bash scripts/train_sp_casa.sh
+```
+
 Main training configuration from the paper draft:
 
 | Component | Setting |
@@ -178,6 +196,12 @@ python model/sart_clip.py \
   --output-dir outputs/sart_ablation_runs
 ```
 
+Equivalent wrapper:
+
+```bash
+DATA_ROOT=/path/to/datasets CKPT_ROOT=checkpoint bash scripts/train_sart.sh
+```
+
 Main Stage-II configuration:
 
 | Component | Setting |
@@ -197,11 +221,17 @@ Main Stage-II configuration:
 ### PGD-100
 
 ```bash
-python test/PGD.py \
+python eval/eval_pgd.py \
   --data-root /path/to/datasets \
   --ckpt-root checkpoint \
   --methods clip_vit_b32 sp_casa_epoch9_ema sart_clip_semjson_source_only \
   --results-csv outputs/evaluation/pgd100_results.csv
+```
+
+Equivalent wrapper:
+
+```bash
+DATA_ROOT=/path/to/datasets CKPT_ROOT=checkpoint bash scripts/eval_pgd.sh
 ```
 
 The main evaluation protocol uses PGD-100 with `epsilon = 1/255`, `alpha = 1/255`, and one random restart. Each model is attacked with its own current zero-shot classification head.
@@ -209,11 +239,17 @@ The main evaluation protocol uses PGD-100 with `epsilon = 1/255`, `alpha = 1/255
 ### AA-fast
 
 ```bash
-python test/AA-fast.py \
+python eval/eval_autoattack.py \
   --data-root /path/to/datasets \
   --ckpt-root checkpoint \
   --methods clip_vit_b32 sp_casa_epoch9_ema sart_clip_semjson_source_only \
   --results-csv outputs/evaluation/aa_fast_results.csv
+```
+
+Equivalent wrapper:
+
+```bash
+DATA_ROOT=/path/to/datasets CKPT_ROOT=checkpoint bash scripts/eval_autoattack.sh
 ```
 
 AA-fast uses the APGD-CE and APGD-DLR branches from AutoAttack as an adaptive-attack sanity check. It is not the full AutoAttack suite with all attack branches.
@@ -268,7 +304,7 @@ Sensitivity to the perturbation budget:
 
 ## Citation
 
-If you use this repository, please cite the SART-CLIP manuscript. The citation metadata is still pending; update the author and venue fields before publication:
+If you use this repository, please cite the SART-CLIP manuscript. GitHub also reads `CITATION.cff` and should display a "Cite this repository" button. The citation metadata is still pending; update the author and venue fields before publication:
 
 ```bibtex
 @misc{sartclip2026,
@@ -282,3 +318,7 @@ If you use this repository, please cite the SART-CLIP manuscript. The citation m
 ## Acknowledgements
 
 This project builds on OpenAI CLIP and follows the zero-shot adversarial robustness evaluation setting studied in prior robust CLIP work, including TeCoA, FARE, PMG-AFT, and AutoAttack-based robustness evaluation.
+
+## License
+
+This project is released under the MIT License. See `LICENSE` for details.

@@ -1,0 +1,48 @@
+﻿# Stage-I SP-CASA reference configuration.
+# This file documents the default paper settings. The current training script
+# accepts the corresponding paths through command-line arguments.
+
+method: SP-CASA
+backbone: OpenAI CLIP ViT-B/32
+source_data: ImageNet train only
+target_data_in_training: not used
+
+paths:
+  train_path: /path/to/datasets/ImageNet/train
+  sem_desc_json: prompt/sem_desc_imagenet_fg_bias.json
+  output_dir: outputs/sp_casa_ablation_runs
+
+training:
+  epochs: 9
+  batch_size: 64
+  grad_accum: 2
+  optimizer: AdamW
+  lr: 5.0e-6
+  weight_decay: 0.1
+  amp: true
+  ema_momentum: 0.999
+
+attack:
+  norm: Linf
+  epsilon: 1/255
+  alpha: 0.25/255
+  early_steps: 8
+  early_restarts: 2
+  late_steps: 4
+  late_restarts: 1
+
+prompt_banks:
+  ensemble: [core, attr, desc, robust, domain]
+  consistency: [core, attr, desc, robust, domain]
+  confuser_topk: 8
+  topk_desc: 6
+
+loss_weights:
+  adv: 1.0
+  clean: 0.10
+  bank_ce: 0.08
+  prompt_consistency: 0.25
+  margin: 0.35
+  visual_ssl: 0.08
+  ema_anchor: 0.04
+  clean_adv_kl_beta: 1.2

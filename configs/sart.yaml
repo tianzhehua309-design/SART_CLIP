@@ -1,0 +1,55 @@
+﻿# Stage-II SART-CLIP reference configuration.
+# This file documents the default paper settings. The current training script
+# accepts the corresponding paths through command-line arguments.
+
+method: SART-CLIP
+backbone: OpenAI CLIP ViT-B/32
+source_data: ImageNet train only
+target_data_in_training: not used
+
+paths:
+  train_path: /path/to/datasets/ImageNet/train
+  ckpt_root: checkpoint
+  warm_start_ckpt: checkpoint/SP_CASA/epoch_9_ema.pt
+  robust_teacher_ckpt: checkpoint/SP_CASA/epoch_9_ema.pt
+  sem_desc_json: prompt/sem_desc_all_datasets_fg_bias_hybrid.json
+  output_dir: outputs/sart_ablation_runs
+
+training:
+  epochs: 1
+  batch_size: 64
+  grad_accum: 2
+  optimizer: AdamW
+  lr: 5.0e-7
+  weight_decay: 0.05
+  amp: true
+  trainable_visual_blocks: 4
+  train_logit_scale: false
+
+attack:
+  norm: Linf
+  epsilon: 1/255
+  alpha: 0.5/255
+  steps: 6
+  random_start: true
+
+prompt_banks:
+  train: [core, attr, desc, robust]
+  topk_desc: 5
+
+distillation:
+  t_sem: 2.0
+  t_rob: 2.0
+  t_cons: 2.0
+
+loss_weights:
+  adv_ce: 1.0
+  clean_ce: 0.15
+  sem_kl_clean: 0.4
+  sem_kl_adv: 0.6
+  sem_kl_style: 0.4
+  robust_teacher: 0.5
+  clean_adv_consistency: 0.3
+  feature_clean: 0.2
+  feature_adv: 0.3
+  style_consistency: 0.3

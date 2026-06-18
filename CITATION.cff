@@ -1,0 +1,23 @@
+﻿cff-version: 1.2.0
+message: "If you use this software or pretrained checkpoints, please cite the SART-CLIP manuscript."
+title: "SART-CLIP: Source-Domain Semantic-Preserving Robust Transfer for Zero-Shot CLIP Image Recognition"
+authors:
+  - family-names: "Hua"
+    given-names: "Tianzhe"
+repository-code: "https://github.com/tianzhehua309-design/SART_CLIP"
+url: "https://github.com/tianzhehua309-design/SART_CLIP"
+date-released: "2026-06-18"
+version: "0.1.0"
+license: "MIT"
+keywords:
+  - CLIP
+  - zero-shot learning
+  - adversarial robustness
+  - robust transfer learning
+  - vision-language models
+abstract: >-
+  SART-CLIP is a two-stage source-only robust adaptation framework for improving
+  the zero-shot adversarial robustness of CLIP. Stage-I SP-CASA learns a
+  prompt-aware robust warm start, and Stage-II SART-CLIP uses semantic
+  distribution preservation to reduce cross-modal semantic drift during robust
+  transfer.
