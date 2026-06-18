@@ -260,7 +260,7 @@ AA-fast uses the APGD-CE and APGD-DLR branches from AutoAttack as an adaptive-at
 
 ## Main Results
 
-The table below reproduces the paper's Table 2 for the two proposed models only. Clean accuracy uses epsilon `0/255`; robust accuracy uses PGD-100 with epsilon `1/255`. All values are top-1 accuracy (%).
+Clean accuracy uses epsilon `0/255`; robust accuracy uses PGD-100 with epsilon `1/255`. All values are top-1 accuracy (%).
 
 | Model | Metric | ImageNet | CIFAR10 | STL-10 | CIFAR100 | Caltech101 | Caltech256 | SUN397 | DTD | StanfordCars | Food101 | OxfordPet | Flowers | FGVC | EuroSAT | Hateful | PCAM | Average |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
